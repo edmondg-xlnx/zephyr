@@ -415,6 +415,9 @@ def write_interrupts(node: edtlib.Node) -> None:
                 name_vals.append((name_macro, f"DT_{idx_macro}"))
                 name_vals.append((name_macro + "_EXISTS", 1))
 
+        if "msi-parent" in irq.controller.props:
+            irq.controller = irq.controller.props["msi-parent"].val
+
         idx_controller_macro = f"{path_id}_IRQ_IDX_{i}_CONTROLLER"
         idx_controller_path = f"DT_{irq.controller.z_path_id}"
         idx_vals.append((idx_controller_macro, idx_controller_path))

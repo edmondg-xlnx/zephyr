@@ -11,9 +11,12 @@
  */
 #include <zephyr/irq.h>
 #include <zephyr/irq_multilevel.h>
+#include <zephyr/irq_nextlevel.h>
 
 #include <zephyr/drivers/interrupt_controller/riscv_clic.h>
 #include <zephyr/drivers/interrupt_controller/riscv_plic.h>
+
+#include "sw_isr_common.h"
 
 #if defined(CONFIG_RISCV_HAS_CLIC)
 
@@ -52,13 +55,20 @@ void arch_irq_enable(unsigned int irq)
 {
 	uint32_t mie;
 
-#if defined(CONFIG_RISCV_HAS_PLIC)
+#if defined(CONFIG_RISCV_HAS_PLIC) || defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
 	unsigned int level = irq_get_level(irq);
 
+#if defined(CONFIG_RISCV_HAS_PLIC)
 	if (level == 2) {
 		riscv_plic_irq_enable(irq);
 		return;
 	}
+#else
+	if (level > 1) {
+		irq_enable_next_level(z_get_sw_isr_device_from_irq(irq), irq);
+		return;
+	}
+#endif
 #endif
 
 	/*
@@ -72,13 +82,20 @@ void arch_irq_disable(unsigned int irq)
 {
 	uint32_t mie;
 
-#if defined(CONFIG_RISCV_HAS_PLIC)
+#if defined(CONFIG_RISCV_HAS_PLIC) || defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
 	unsigned int level = irq_get_level(irq);
 
+#if defined(CONFIG_RISCV_HAS_PLIC)
 	if (level == 2) {
 		riscv_plic_irq_disable(irq);
 		return;
 	}
+#else
+	if (level > 1) {
+		irq_disable_next_level(z_get_sw_isr_device_from_irq(irq), irq);
+		return;
+	}
+#endif
 #endif
 
 	/*
@@ -92,12 +109,18 @@ int arch_irq_is_enabled(unsigned int irq)
 {
 	uint32_t mie;
 
-#if defined(CONFIG_RISCV_HAS_PLIC)
+#if defined(CONFIG_RISCV_HAS_PLIC) || defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
 	unsigned int level = irq_get_level(irq);
 
+#if defined(CONFIG_RISCV_HAS_PLIC)
 	if (level == 2) {
 		return riscv_plic_irq_is_enabled(irq);
 	}
+#else
+	if (level > 1) {
+		return irq_line_is_enabled_next_level(z_get_sw_isr_device_from_irq(irq), irq);
+	}
+#endif
 #endif
 
 	mie = csr_read(mie);
@@ -105,16 +128,22 @@ int arch_irq_is_enabled(unsigned int irq)
 	return !!(mie & (1 << irq));
 }
 
-#if defined(CONFIG_RISCV_HAS_PLIC)
+#if defined(CONFIG_RISCV_HAS_PLIC) || defined(CONFIG_RISCV_HAS_APLIC)
 void z_riscv_irq_priority_set(unsigned int irq, unsigned int prio, uint32_t flags)
 {
 	unsigned int level = irq_get_level(irq);
 
+#if defined(CONFIG_RISCV_HAS_PLIC)
 	if (level == 2) {
 		riscv_plic_set_priority(irq, prio);
 	}
+#else
+	if (level > 1) {
+		 irq_set_priority_next_level(z_get_sw_isr_device_from_irq(irq), irq, prio, flags);
+	}
+#endif
 }
-#endif /* CONFIG_RISCV_HAS_PLIC */
+#endif /* CONFIG_RISCV_HAS_PLIC || CONFIG_RISCV_HAS_APLIC */
 #endif /* CONFIG_RISCV_HAS_CLIC */
 
 #if defined(CONFIG_RISCV_SOC_INTERRUPT_INIT)
