@@ -1,0 +1,17 @@
+# Copyright (c) 2025, AMD Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: RISC-V incoming MSI interrupt file
+
+compatible: "riscv,imsic"
+
+include: [base.yaml]
+
+properties:
+  reg:
+    required: true
+
+  cpu-id:
+    type: int
+    description: interrupt file hart ID
+    required: true
