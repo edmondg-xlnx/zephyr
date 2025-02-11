@@ -32,6 +32,7 @@ from devicetree import edtlib
 def main():
     global header_file
     global flash_area_num
+    global intc_num
 
     args = parse_args()
 
@@ -41,6 +42,7 @@ def main():
         edt = pickle.load(f)
 
     flash_area_num = 0
+    intc_num = 0
 
     # Create the generated header.
     with open(args.header_out, "w", encoding="utf-8") as header_file:
@@ -390,9 +392,14 @@ def write_interrupts(node: edtlib.Node) -> None:
             return irq_num + 16
         err(f"Invalid interrupt type specified for {irq!r}")
 
+    global intc_num
     idx_vals = []
     name_vals = []
     path_id = node.z_path_id
+
+    if "interrupt-controller" in node.props:
+        idx_vals.append((f"{path_id}_INTC_INST", intc_num))
+        intc_num += 1
 
     if node.interrupts is not None:
         idx_vals.append((f"{path_id}_IRQ_NUM", len(node.interrupts)))
