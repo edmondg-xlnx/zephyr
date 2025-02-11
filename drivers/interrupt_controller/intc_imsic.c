@@ -65,7 +65,7 @@ struct imsic_config {
 	void (*irq_config_func)(void);
 	unsigned int nr_ids;
 	const struct imsic_hart_context *hart_context;
-	struct _isr_table_entry *isr_table;
+	unsigned int irq_offset;
 };
 
 struct imsic_data {
@@ -80,6 +80,13 @@ struct imsic_data {
 };
 
 #define IMSIC_NR_INTIDS(config) MIN((config)->nr_ids, CONFIG_MAX_IRQ_PER_AGGREGATOR)
+
+unsigned int imsic_intid(const struct device *dev, unsigned int irq)
+{
+	const struct imsic_config *config = dev->config;
+	__ASSERT_NO_MSG(irq > config->irq_offset);
+	return irq - config->irq_offset;
+}
 
 static inline unsigned int aplic_intid(struct imsic_data *data, unsigned int intid)
 {
@@ -107,7 +114,7 @@ static void imsic_irq_handler(const struct device *dev)
 		return;
 	}
 
-	ite = &config->isr_table[intid];
+	ite = &_sw_isr_table[config->irq_offset + intid];
 	ite->isr(ite->arg);
 
 #ifdef CONFIG_APLIC
@@ -160,12 +167,12 @@ static void imsic_intid_set_state(const struct device *dev, unsigned int intid, 
 
 static void imsic_irq_enable(const struct device *dev, unsigned int irq)
 {
-	imsic_intid_set_state(dev, irq_from_level_2(irq), true);
+	imsic_intid_set_state(dev, imsic_intid(dev, irq), true);
 }
 
 static void imsic_irq_disable(const struct device *dev, unsigned int irq)
 {
-	imsic_intid_set_state(dev, irq_from_level_2(irq), false);
+	imsic_intid_set_state(dev, imsic_intid(dev, irq), false);
 }
 
 static unsigned int imsic_get_state(const struct device *dev)
@@ -186,7 +193,7 @@ static int imsic_get_line_state(const struct device *dev, unsigned int irq)
 {
 	const struct imsic_config *config = dev->config;
 	struct imsic_data *data = dev->data;
-	unsigned int intid = irq_from_level_2(irq);
+	unsigned int intid = imsic_intid(dev, irq);
 	unsigned long val;
 
 	__ASSERT_NO_MSG(intid > 0 && intid <= IMSIC_NR_INTIDS(config));
@@ -211,7 +218,7 @@ static void imsic_set_priority(const struct device *dev,
 
 	k_spinlock_key_t key = k_spin_lock(&data->lock);
 
-	intid = aplic_intid(data, irq_from_level_2(irq));
+	intid = aplic_intid(data, imsic_intid(dev, irq));
 	if (intid)
 		aplic_set_intid_priority(data->aplic, intid, prio, flags);
 
@@ -284,7 +291,7 @@ static int do_alloc_msi(const struct device *dev,
 	for (size_t i = 0; i < nvectors; ++i) {
 		vectors->eventid = offset;
 		vectors->address = msiaddr;
-		vectors->irq = irq_to_level_2(offset) | config->irq;
+		vectors->irq = config->irq_offset + offset;
 		offset++;
 		vectors++;
 	}
@@ -374,7 +381,7 @@ static const struct irq_next_level_api imsic_api = {
 		.irq = DT_INST_IRQN(n),                                                            \
 		.irq_config_func = imsic_irq_config_func_##n,                                      \
 		.nr_ids = DT_INST_PROP(n, riscv_num_ids),                                          \
-		.isr_table = &_sw_isr_table[INTC_INST_ISR_TBL_OFFSET(n)],                          \
+		.irq_offset = INTC_INST_ISR_TBL_OFFSET(n),                                         \
 		.hart_context = imsic_hart_ctx_##n,                                                \
 	};                                                                                         \
 	IMSIC_IRQ_FUNC_DEFINE(n)
