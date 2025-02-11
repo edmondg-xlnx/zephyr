@@ -85,7 +85,7 @@ struct aplic_config {
 #else
 	unsigned int irq;
 	void (*irq_config_func)(void);
-	struct _isr_table_entry *isr_table;
+	unsigned int irq_offset;
 #endif
 	unsigned int nr_ids;
 };
@@ -103,6 +103,13 @@ struct aplic_data {
 
 #ifndef CONFIG_IMSIC
 
+static inline unsigned int aplic_intid(const struct device *dev, unsigned int irq)
+{
+	const struct aplic_config *config = dev->config;
+	__ASSERT_NO_MSG(irq > config->irq_offset);
+	return irq - config->irq_offset;
+}
+
 static void aplic_irq_handler(const struct device *dev)
 {
 	const struct aplic_config *config = dev->config;
@@ -117,18 +124,18 @@ static void aplic_irq_handler(const struct device *dev)
 		return;
 	}
 
-	ite = &config->isr_table[intid];
+	ite = &_sw_isr_table[config->irq_offset + intid];
 	ite->isr(ite->arg);
 }
 
 static void aplic_irq_enable(const struct device *dev, unsigned int irq)
 {
-	aplic_set_intid_state(dev, irq_from_level_2(irq), true);
+	aplic_set_intid_state(dev, aplic_intid(dev, irq), true);
 }
 
 static void aplic_irq_disable(const struct device *dev, unsigned int irq)
 {
-	aplic_set_intid_state(dev, irq_from_level_2(irq), false);
+	aplic_set_intid_state(dev, aplic_intid(dev, irq), false);
 }
 
 static unsigned int aplic_get_state(const struct device *dev)
@@ -149,7 +156,7 @@ static int aplic_get_line_state(const struct device *dev, unsigned int irq)
 {
 	const struct aplic_config *config = dev->config;
 	struct aplic_data *data = dev->data;
-	unsigned int intid = irq_from_level_2(irq);
+	unsigned int intid = aplic_intid(dev, irq);
 	unsigned long val;
 
 	__ASSERT_NO_MSG(intid > 0 && intid <= APLIC_NR_INTIDS(config));
@@ -168,7 +175,7 @@ static void aplic_set_priority(const struct device *dev,
 			       unsigned int irq, unsigned int prio,
 			       uint32_t flags)
 {
-	aplic_set_intid_priority(dev, irq_from_level_2(irq), prio, flags);
+	aplic_set_intid_priority(dev, aplic_intid(dev, irq), prio, flags);
 }
 
 #endif /* !CONFIG_IMSIC */
@@ -240,8 +247,17 @@ int riscv_aplic_set_affinity(unsigned int irq, uint32_t proc_id)
 	const struct device *dev = get_aplic_dev_from_irq(irq);
 	const struct aplic_config *config = dev->config;
 	struct aplic_data *data = dev->data;
-	unsigned int intid = irq_from_level_2(irq);
+	unsigned int intid;
 	unsigned long val;
+
+#ifdef CONFIG_IMSIC
+	/* irq is in IMSIC domain, convert to APLIC intid */
+	intid = imsic_intid(config->imsic, irq);
+	__ASSERT_NO_MSG(intid >= data->msi_offset);
+	intid = intid - data->msi_offset + 1;
+#else
+	intid = aplic_intid(dev, irq);
+#endif
 
 	__ASSERT_NO_MSG(intid > 0 && intid <= APLIC_NR_INTIDS(config));
 
@@ -369,7 +385,7 @@ static const struct irq_next_level_api aplic_api = {
 		.irq = DT_INST_IRQN(n),                                                            \
 		.irq_config_func = aplic_irq_config_func_##n,                                      \
 		.nr_ids = DT_INST_PROP(n, riscv_num_sources),                                      \
-		.isr_table = &_sw_isr_table[INTC_INST_ISR_TBL_OFFSET(n)],                          \
+		.irq_offset = INTC_INST_ISR_TBL_OFFSET(n),                                         \
 	};                                                                                         \
 	APLIC_IRQ_FUNC_DEFINE(n)
 

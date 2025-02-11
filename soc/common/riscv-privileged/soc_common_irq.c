@@ -55,20 +55,18 @@ void arch_irq_enable(unsigned int irq)
 {
 	uint32_t mie;
 
-#if defined(CONFIG_RISCV_HAS_PLIC) || defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
+#if defined(CONFIG_RISCV_HAS_PLIC)
 	unsigned int level = irq_get_level(irq);
 
-#if defined(CONFIG_RISCV_HAS_PLIC)
 	if (level == 2) {
 		riscv_plic_irq_enable(irq);
 		return;
 	}
-#else
-	if (level > 1) {
+#elif defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
+	if (irq >= CONFIG_MAX_IRQ_PER_AGGREGATOR) {
 		irq_enable_next_level(z_get_sw_isr_device_from_irq(irq), irq);
 		return;
 	}
-#endif
 #endif
 
 	/*
@@ -82,20 +80,18 @@ void arch_irq_disable(unsigned int irq)
 {
 	uint32_t mie;
 
-#if defined(CONFIG_RISCV_HAS_PLIC) || defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
+#if defined(CONFIG_RISCV_HAS_PLIC)
 	unsigned int level = irq_get_level(irq);
 
-#if defined(CONFIG_RISCV_HAS_PLIC)
 	if (level == 2) {
 		riscv_plic_irq_disable(irq);
 		return;
 	}
-#else
-	if (level > 1) {
+#elif defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
+	if (irq >= CONFIG_MAX_IRQ_PER_AGGREGATOR) {
 		irq_disable_next_level(z_get_sw_isr_device_from_irq(irq), irq);
 		return;
 	}
-#endif
 #endif
 
 	/*
@@ -109,18 +105,16 @@ int arch_irq_is_enabled(unsigned int irq)
 {
 	uint32_t mie;
 
-#if defined(CONFIG_RISCV_HAS_PLIC) || defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
+#if defined(CONFIG_RISCV_HAS_PLIC)
 	unsigned int level = irq_get_level(irq);
 
-#if defined(CONFIG_RISCV_HAS_PLIC)
 	if (level == 2) {
 		return riscv_plic_irq_is_enabled(irq);
 	}
-#else
-	if (level > 1) {
+#elif defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
+	if (irq >= CONFIG_MAX_IRQ_PER_AGGREGATOR) {
 		return irq_line_is_enabled_next_level(z_get_sw_isr_device_from_irq(irq), irq);
 	}
-#endif
 #endif
 
 	mie = csr_read(mie);
@@ -131,14 +125,14 @@ int arch_irq_is_enabled(unsigned int irq)
 #if defined(CONFIG_RISCV_HAS_PLIC) || defined(CONFIG_RISCV_HAS_APLIC)
 void z_riscv_irq_priority_set(unsigned int irq, unsigned int prio, uint32_t flags)
 {
+#if defined(CONFIG_RISCV_HAS_PLIC)
 	unsigned int level = irq_get_level(irq);
 
-#if defined(CONFIG_RISCV_HAS_PLIC)
 	if (level == 2) {
 		riscv_plic_set_priority(irq, prio);
 	}
 #else
-	if (level > 1) {
+	if (irq >= CONFIG_MAX_IRQ_PER_AGGREGATOR) {
 		 irq_set_priority_next_level(z_get_sw_isr_device_from_irq(irq), irq, prio, flags);
 	}
 #endif
