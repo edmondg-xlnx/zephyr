@@ -32,6 +32,10 @@
 #include <zephyr/arch/arch_interface.h>
 #include <zephyr/arch/riscv/csr.h>
 
+#ifdef CONFIG_CUSTOM_PMP_ENTRIES
+#include <pmp.h>
+#endif
+
 #define LOG_LEVEL CONFIG_MPU_LOG_LEVEL
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(mpu);
@@ -55,6 +59,10 @@ LOG_MODULE_REGISTER(mpu);
 #define PMP_ADDR_NAPOT(addr, size)	PMP_ADDR(addr | NAPOT_RANGE(size))
 
 #define PMP_NONE 0
+
+#ifdef CONFIG_CUSTOM_PMP_ENTRIES
+extern const struct custom_n_pmp_entries soc_n_entries;
+#endif
 
 static void print_pmp_entries(unsigned int pmp_start, unsigned int pmp_end,
 			      unsigned long *pmp_addr, unsigned long *pmp_cfg,
@@ -351,12 +359,28 @@ void z_riscv_pmp_init(void)
 	unsigned long pmp_addr[CONFIG_PMP_SLOTS];
 	unsigned long pmp_cfg[CONFIG_PMP_SLOTS / PMPCFG_STRIDE];
 	unsigned int index = 0;
+#ifdef CONFIG_CUSTOM_PMP_ENTRIES
+	unsigned int i, n;
+	const struct custom_pmp_entries *custom_soc_pmp_ptr;
+#endif
 
 	/* The read-only area is always there for every mode */
 	set_pmp_entry(&index, PMP_R | PMP_X | PMP_L,
 		      (uintptr_t)__rom_region_start,
 		      (size_t)__rom_region_size,
 		      pmp_addr, pmp_cfg, ARRAY_SIZE(pmp_addr));
+
+#ifdef CONFIG_CUSTOM_PMP_ENTRIES
+	n = soc_n_entries.nentries;
+	custom_soc_pmp_ptr = soc_n_entries.entries;
+	for (i = 0; i < n; ++i) {
+	     set_pmp_entry(&index, custom_soc_pmp_ptr->flags,
+			   custom_soc_pmp_ptr->addr,
+			   custom_soc_pmp_ptr->size,
+			   pmp_addr, pmp_cfg, ARRAY_SIZE(pmp_addr));
+	     custom_soc_pmp_ptr++;
+	}
+#endif
 
 #ifdef CONFIG_NULL_POINTER_EXCEPTION_DETECTION_PMP
 	/*

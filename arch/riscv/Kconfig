@@ -382,6 +382,11 @@ config PMP_GRANULARITY
 	  (ie 4, 8, 16, ...), but if neither TOR mode nor NA4 mode is
 	  supported, the minimum granularity is 8.
 
+config CUSTOM_PMP_ENTRIES
+	bool "Select custom PMP entries"
+	help
+	  This option provides custom PMP entries to be programmed
+
 endif #RISCV_PMP
 
 config PMP_STACK_GUARD
