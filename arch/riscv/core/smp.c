@@ -83,8 +83,12 @@ void arch_secondary_cpu_init(int hartid)
 }
 
 #ifdef CONFIG_SMP
-
-#define MSIP_BASE 0x2000000UL
+#if DT_HAS_COMPAT_STATUS_OKAY(sifive_clint0)
+	#define DT_DRV_COMPAT sifive_clint0
+	#define MSIP_BASE	(DT_INST_REG_ADDR(0))
+#else
+	#define MSIP_BASE 0x2000000UL
+#endif
 #define MSIP(hartid) ((volatile uint32_t *)MSIP_BASE)[hartid]
 
 static atomic_val_t cpu_pending_ipi[CONFIG_MP_MAX_NUM_CPUS];

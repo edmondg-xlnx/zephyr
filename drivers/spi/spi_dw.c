@@ -615,6 +615,11 @@ int spi_dw_init(const struct device *dev)
 		irq_enable(DT_INST_IRQ_BY_NAME(inst, rxu_err, irq));		\
 		irq_enable(DT_INST_IRQ_BY_NAME(inst, mst_err, irq));
 
+#define SPI_DW_IRQ_FLAGS(n)                                         \
+	COND_CODE_1(DT_INST_IRQ_HAS_CELL(n, sense),                     \
+		       (DT_INST_IRQ(n, sense)),                             \
+		       (0))
+
 #define SPI_DW_IRQ_HANDLER(inst)                                   \
 void spi_dw_irq_config_##inst(void)                                \
 {                                                                  \
@@ -622,7 +627,7 @@ COND_CODE_1(IS_EQ(DT_NUM_IRQS(DT_DRV_INST(inst)), 1),              \
 	(IRQ_CONNECT(DT_INST_IRQN(inst),                           \
 		DT_INST_IRQ(inst, priority),                       \
 		spi_dw_isr, DEVICE_DT_INST_GET(inst),              \
-		0);                                                \
+		SPI_DW_IRQ_FLAGS(inst));                           \
 	irq_enable(DT_INST_IRQN(inst));),                          \
 	(COND_CODE_1(IS_EQ(DT_NUM_IRQS(DT_DRV_INST(inst)), 3),     \
 		(SPI_CFG_IRQS_SINGLE_ERR_LINE(inst)),		   \
