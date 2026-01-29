@@ -145,7 +145,7 @@ static const struct coredump_driver_api coredump_api = {
 			"Allow exactly one entry (address and size) in memory_regions");     \
 		BUILD_ASSERT(DT_INST_PROP_BY_IDX(n, memory_regions, 0) == 0,             \
 			"Verify address is set to 0");                                       \
-		static uint8_t coredump_bytes_##n[DT_INST_PROP_BY_IDX(n, memory_regions, 1)] \
+		static uint8_t coredump_bytes[DT_INST_PROP_BY_IDX(n, memory_regions, 1)] \
 			__aligned(4);                                                        \
 	), ())                                                                       \
 	static struct coredump_data coredump_data_##n;                               \
@@ -158,7 +158,7 @@ static const struct coredump_driver_api coredump_api = {
 			(                                                                    \
 			/* Callback type device has one entry in memory_regions array */     \
 			.memory_regions = {                                                  \
-				(size_t)&coredump_bytes_##n[0],                                  \
+				(size_t)&coredump_bytes[0],                                      \
 				DT_INST_PROP_BY_IDX(n, memory_regions, 1),                       \
 			},                                                                   \
 			),                                                                   \
