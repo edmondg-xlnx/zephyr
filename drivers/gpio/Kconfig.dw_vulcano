@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config GPIO_DW_VULCANO
-	bool "Designware GPIO Vulcano "
+	bool "Designware GPIO Vulcano"
 	default y
 	depends on DT_HAS_SNPS_DESIGNWARE_GPIO_VULCANO_ENABLED
 	help

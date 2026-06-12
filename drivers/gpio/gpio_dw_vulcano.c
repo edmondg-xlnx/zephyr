@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT snps_designware_gpio
+#define DT_DRV_COMPAT snps_designware_gpio_vulcano
 
 #include <errno.h>
 
@@ -436,7 +436,8 @@ static int gpio_dw_initialize(const struct device *port)
 
 /* Bindings to the platform */
 #define INST_IRQ_FLAGS(n) \
-	COND_CODE_1(DT_INST_IRQ_HAS_CELL(n, flags), (DT_INST_IRQ(n, flags)), (0))
+       COND_CODE_1(DT_INST_IRQ_HAS_CELL(n, flags), (DT_INST_IRQ(n, flags)),                     \
+                  (COND_CODE_1(DT_INST_IRQ_HAS_CELL(n, sense), (DT_INST_IRQ(n, sense)), (0))))
 
 #define GPIO_CFG_IRQ(idx, n)									\
 		IRQ_CONNECT(DT_INST_IRQN_BY_IDX(n, idx),					\
