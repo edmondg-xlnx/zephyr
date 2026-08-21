@@ -408,7 +408,7 @@ static ALWAYS_INLINE size_t sys_cache_data_line_size_get(void)
 {
 #ifdef CONFIG_DCACHE_LINE_SIZE_DETECT
 	return cache_data_line_size_get();
-#elif (CONFIG_DCACHE_LINE_SIZE != 0)
+#elif defined(CONFIG_DCACHE_LINE_SIZE) && (CONFIG_DCACHE_LINE_SIZE != 0)
 	return CONFIG_DCACHE_LINE_SIZE;
 #else
 	return DT_PROP_OR(_CPU, d_cache_line_size, 0);
@@ -435,7 +435,7 @@ static ALWAYS_INLINE size_t sys_cache_instr_line_size_get(void)
 {
 #ifdef CONFIG_ICACHE_LINE_SIZE_DETECT
 	return cache_instr_line_size_get();
-#elif (CONFIG_ICACHE_LINE_SIZE != 0)
+#elif defined(CONFIG_ICACHE_LINE_SIZE) && (CONFIG_ICACHE_LINE_SIZE != 0)
 	return CONFIG_ICACHE_LINE_SIZE;
 #else
 	return DT_PROP_OR(_CPU, i_cache_line_size, 0);

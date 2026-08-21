@@ -1229,7 +1229,7 @@ int net_if_set_link_addr_locked(struct net_if *iface,
 				uint8_t *addr, uint8_t len,
 				enum net_link_type type);
 
-#if CONFIG_NET_IF_LOG_LEVEL >= LOG_LEVEL_DBG
+#if defined(CONFIG_NET_IF_LOG_LEVEL) && (CONFIG_NET_IF_LOG_LEVEL >= LOG_LEVEL_DBG)
 extern int net_if_addr_unref_debug(struct net_if *iface,
 				   sa_family_t family,
 				   const void *addr,
